@@ -37,9 +37,9 @@ func (priv *PrivateKey) Public() *PublicKey {
 }
 
 func NewKey(curve elliptic.Curve, sk []byte) *PrivateKey {
-	Yx, Yy := curve.ScalarBaseMult(sk)
+	x, y := curve.ScalarBaseMult(sk)
 	return &PrivateKey{
-		d:         new(big.Int).SetBytes(sk),             // Use SK to derive the VRF secret scalar x
-		PublicKey: PublicKey{Curve: curve, X: Yx, Y: Yy}, // VRF public key Y = x*B
+		PublicKey: PublicKey{Curve: curve, X: x, Y: y}, // VRF public key Y = x*B
+		d:         new(big.Int).SetBytes(sk),           // Use SK to derive the VRF secret scalar x
 	}
 }
