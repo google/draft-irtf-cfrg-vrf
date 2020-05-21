@@ -60,18 +60,13 @@ type ECVRFParams struct {
 
 // ECVRFAux contains auxiliary functions nessesary for the computation of ECVRF.
 type ECVRFAux interface {
-	// PointToString converts an EC point to an octet string according to
-	// the encoding specified in Section 2.3.3 of [SECG1] with point
-	// compression on.  This implies ptLen = 2n + 1 = 33.
+	// PointToString converts an EC point to an octet string.
 	PointToString(Px, Py *big.Int) []byte
 
-	// StringToPoint converts an octet string to an EC point
-	// This function MUST output INVALID if the octet string does not
-	// decode to an EC point.
+	// StringToPoint converts an octet string to an EC point.
+	// This function MUST output INVALID if the octet string does not decode to an EC point.
 	StringToPoint(h []byte) (Px, Py *big.Int, err error)
 
-	// ArbitraryStringToPoint(s) = string_to_point(0x02 || s)
-	// (where 0x02 is a single octet with value 2, 0x02=int_to_string(2, 1)).
-	// The input s is a 32-octet string and the output is either an EC point or "INVALID".
+	// ArbitraryStringToPoint converts an arbitrary 32 byte string s to an EC point.
 	ArbitraryStringToPoint(s []byte) (Px, Py *big.Int, err error)
 }

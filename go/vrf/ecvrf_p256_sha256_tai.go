@@ -50,7 +50,9 @@ func (s p256SHA256TAISuite) Params() *ECVRFParams {
 	return s.ECVRFParams
 }
 
-// PointToString return the point encoded according to Section 2.3.3 of [SECG1] with point compression on.
+// PointToString converts an EC point to an octet string according to
+// the encoding specified in Section 2.3.3 of [SECG1] with point
+// compression on.  This implies ptLen = 2n + 1 = 33.
 func (a p256SHA256TAIAux) PointToString(Px, Py *big.Int) []byte {
 	return marshalCompressed(a.params.ec, Px, Py)
 }
@@ -63,12 +65,12 @@ func (a p256SHA256TAIAux) StringToPoint(s []byte) (x, y *big.Int, err error) {
 	return unmarshalCompressed(a.params.ec, s)
 }
 
-// ArbitraryString2Point returns string_to_point(0x02 || h_string)
+// ArbitraryString2Point returns StringToPoint(0x02 || h).
 // Attempts to interpret an arbitrary string as a compressed elliptic code point.
 // The input h is a 32-octet string.  Returns either an EC point or "INVALID".
-func (a p256SHA256TAIAux) ArbitraryStringToPoint(s []byte) (Px, Py *big.Int, err error) {
-	if got, want := len(s), 32; got != want {
+func (a p256SHA256TAIAux) ArbitraryStringToPoint(h []byte) (Px, Py *big.Int, err error) {
+	if got, want := len(h), 32; got != want {
 		return nil, nil, fmt.Errorf("len(s): %v, want %v", got, want)
 	}
-	return a.StringToPoint(append([]byte{0x02}, s...))
+	return a.StringToPoint(append([]byte{0x02}, h...))
 }
