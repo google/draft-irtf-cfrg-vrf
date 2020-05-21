@@ -23,8 +23,6 @@ import (
 	_ "crypto/sha256"
 )
 
-var zero big.Int
-
 type (
 	p256SHA256TAISuite struct{ *ECVRFParams }
 	p256SHA256TAIAux   struct{ params *ECVRFParams }
@@ -34,7 +32,7 @@ var p256SHA256TAI p256SHA256TAISuite
 
 func initP256SHA256TAI() {
 	// https://tools.ietf.org/html/draft-irtf-cfrg-vrf-06#section-5.5
-	p256SHA256TAI.ECVRFParams = &ECVRFParams{
+	p := &ECVRFParams{
 		suiteString: []byte{0x01},    // int_to_string(1, 1)
 		ec:          elliptic.P256(), // NIST P-256 elliptic curve, [FIPS-186-4] (Section D.1.2.3).
 		n:           16,              // 2n = 32, Params().BitSize
@@ -43,15 +41,18 @@ func initP256SHA256TAI() {
 		cofactor:    1,
 		hash:        crypto.SHA256,
 	}
-	p256SHA256TAI.ECVRFParams.aux = p256SHA256TAIAux{params: p256SHA256TAI.ECVRFParams}
+	p.aux = p256SHA256TAIAux{params: p}
+	p256SHA256TAI.ECVRFParams = p
 }
 
+// Params returns the parameters for the ECVRF.
 func (s p256SHA256TAISuite) Params() *ECVRFParams {
 	return s.ECVRFParams
 }
 
+// PointToString return the point encoded according to Section 2.3.3 of [SECG1] with point compression on.
 func (a p256SHA256TAIAux) PointToString(Px, Py *big.Int) []byte {
-	return secg1EncodeCompressed(a.params.ec, Px, Py)
+	return marshalCompressed(a.params.ec, Px, Py)
 }
 
 // String2Point converts an octet string to an EC point according to the
@@ -59,7 +60,7 @@ func (a p256SHA256TAIAux) PointToString(Px, Py *big.Int) []byte {
 // INVALID if the octet string does not decode to an EC point.
 // http://www.secg.org/sec1-v2.pdf
 func (a p256SHA256TAIAux) StringToPoint(s []byte) (x, y *big.Int, err error) {
-	return secg1Decode(a.params.ec, s)
+	return unmarshalCompressed(a.params.ec, s)
 }
 
 // ArbitraryString2Point returns string_to_point(0x02 || h_string)

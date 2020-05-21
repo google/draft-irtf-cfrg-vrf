@@ -48,17 +48,14 @@ func NewKey(curve elliptic.Curve, sk []byte) *PrivateKey {
 // ECVRFParams holds shared values across ECVRF implementations.
 // ECVRFParams also has generic algorithms that rely on ECVRFAux for specific sub algorithms.
 type ECVRFParams struct {
-	suiteString []byte         // single nonzero octet specifying the ECVRF ciphersuite
+	suiteString []byte         // Single nonzero octet specifying the ECVRF ciphersuite
 	ec          elliptic.Curve // Elliptic curve defined over F
-	//   G - subgroup of E of large prime order.
-	//   q - prime order of group G, ec.Params().N
-	//   B - generator of group G, ec.Params.{Gx,Gy}
-	n        int  // 2n  - length, in octets, of a field element in F.
-	ptLen    int  // length, in octets, of an EC point encoded as an octet string
-	qLen     int  // length of q in octets. (note that in the typical case, qLen equals 2n or is close to 2n)
-	cofactor byte //number of points on E divided by q
-	hash     crypto.Hash
-	aux      ECVRFAux // Auxiliary functions
+	n           int            // 2n is the length, in bytes, of a field element in F
+	ptLen       int            // Length, in octets, of an EC point encoded as an octet string
+	qLen        int            // Length of the prime order of the EC group in octets. (Typically ~2n)
+	cofactor    byte           // The number of points on EC divided by the prime order of the group
+	hash        crypto.Hash    // Cryptographic hash function
+	aux         ECVRFAux       // Suite specific helper functions
 }
 
 // ECVRFAux contains auxiliary functions nessesary for the computation of ECVRF.
