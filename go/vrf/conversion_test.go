@@ -58,8 +58,8 @@ func TestSEG1EncodeDecode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	b := secg1EncodeCompressed(c, Ax, Ay)
-	Bx, By, err := secg1Decode(c, b)
+	b := marshalCompressed(c, Ax, Ay)
+	Bx, By, err := unmarshalCompressed(c, b)
 	if err != nil {
 		t.Fatal(err)
 	}
