@@ -49,7 +49,7 @@ var errInvalidPoint = errors.New("invalid point")
 // Section 4.3.6 of ANSI X9.62.
 func unmarshalCompressed(curve elliptic.Curve, data []byte) (x, y *big.Int, err error) {
 	byteLen := (curve.Params().BitSize + 7) >> 3
-	if (data[0] &^ 1) != 2 { // compressed form
+	if data[0] != 2 && data[0] != 3 { // compressed form
 		return nil, nil, errors.New("unrecognized point encoding")
 	}
 	if len(data) != 1+byteLen {
