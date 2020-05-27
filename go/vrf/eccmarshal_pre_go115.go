@@ -12,6 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +build !go1.15
+
+// This file implements compressed point unmarshaling.
+// This code will be in go 1.15
+// Code borrowed from: https://github.com/golang/go/pull/35110
+
 package vrf
 
 import (
@@ -19,10 +25,6 @@ import (
 	"errors"
 	"math/big"
 )
-
-// This file implements compressed point unmarshaling.
-// This code will be in go 1.15
-// Code borrowed from: https://github.com/golang/go/pull/35110
 
 // marshalCompressed converts an EC point to an octet string according to
 // the encoding specified in Section 2.3.3 of [SECG1] with point compression
