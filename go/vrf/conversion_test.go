@@ -51,7 +51,7 @@ func TestI2OSP(t *testing.T) {
 	}
 }
 
-func TestSEG1EncodeDecode(t *testing.T) {
+func TestCompressedMarshalUnmarshal(t *testing.T) {
 	c := elliptic.P256()
 	_, Ax, Ay, err := elliptic.GenerateKey(c, rand.Reader)
 	if err != nil {
