@@ -16,8 +16,6 @@ package vrf
 
 import (
 	"bytes"
-	"crypto/elliptic"
-	"errors"
 	"math/big"
 )
 
@@ -43,71 +41,4 @@ func i2osp(x *big.Int, rLen uint) []byte {
 	}
 	b.Write(x.Bytes())
 	return b.Bytes()[uint(b.Len())-rLen:] // The rightmost rLen bytes.
-}
-
-// This file implements compressed point unmarshaling.
-// This code will be in go 1.15
-// Code borrowed from: https://github.com/golang/go/pull/35110
-
-// marshalCompressed converts an EC point to an octet string according to
-// the encoding specified in Section 2.3.3 of [SECG1] with point compression
-// on. This implies ptLen = 2n + 1 = 33.
-//
-// SECG1 Section 2.3.3 https://www.secg.org/sec1-v1.99.dif.pdf
-func marshalCompressed(curve elliptic.Curve, x, y *big.Int) []byte {
-	byteLen := (curve.Params().BitSize + 7) >> 3
-	compressed := make([]byte, 1+byteLen)
-	compressed[0] = 2 // compressed point
-	compressed[0] += byte(y.Bit(0))
-	i := byteLen + 1 - len(x.Bytes())
-	copy(compressed[i:], x.Bytes())
-	return compressed
-}
-
-var errInvalidPoint = errors.New("invalid point")
-
-// marshalCompressed decodes a EC point, given as a compressed string.
-// If the decoding fails x and y will be nil.
-//
-// http://www.secg.org/sec1-v2.pdf
-// https://tools.ietf.org/html/rfc8032#section-5.1.3
-// Section 4.3.6 of ANSI X9.62.
-func unmarshalCompressed(curve elliptic.Curve, data []byte) (x, y *big.Int, err error) {
-	byteLen := (curve.Params().BitSize + 7) >> 3
-	if (data[0] &^ 1) != 2 { // compressed form
-		return nil, nil, errors.New("unrecognized point encoding")
-	}
-	if len(data) != 1+byteLen {
-		return nil, nil, errors.New("invalid length for curve")
-	}
-
-	// Based on Routine 2.2.4 in NIST Mathematical routines paper
-	x = new(big.Int).SetBytes(data[1:])
-	y2 := polynomial(curve.Params(), x)
-	y = new(big.Int).ModSqrt(y2, curve.Params().P)
-	if y == nil {
-		return nil, nil, errInvalidPoint // "y^2" is not a square
-	}
-	if !curve.IsOnCurve(x, y) {
-		return nil, nil, errInvalidPoint
-	}
-	if y.Bit(0) != uint(data[0]&0x01) {
-		y.Sub(curve.Params().P, y)
-	}
-
-	return x, y, nil // valid point: return x,y
-}
-
-// polynomial returns x³ - 3x + b.
-func polynomial(curve *elliptic.CurveParams, x *big.Int) *big.Int {
-	x3 := new(big.Int).Mul(x, x)
-	x3.Mul(x3, x)
-
-	threeX := new(big.Int).Lsh(x, 1)
-	threeX.Add(threeX, x)
-	x3.Sub(x3, threeX)
-
-	x3.Add(x3, curve.B)
-	x3.Mod(x3, curve.P)
-	return x3
 }
