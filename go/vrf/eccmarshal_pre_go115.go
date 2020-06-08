@@ -28,7 +28,7 @@ import (
 
 // marshalCompressed converts an EC point to an octet string according to
 // the encoding specified in Section 2.3.3 of [SECG1] with point compression
-// on. This implies ptLen = 2n + 1 = 33.
+// on. If 2n = ceil(log_2(q) / 8) then ptLen = 2n + 1 = 33.
 //
 // SECG1 Section 2.3.3 https://www.secg.org/sec1-v1.99.dif.pdf
 func marshalCompressed(curve elliptic.Curve, x, y *big.Int) []byte {
@@ -43,7 +43,7 @@ func marshalCompressed(curve elliptic.Curve, x, y *big.Int) []byte {
 
 var errInvalidPoint = errors.New("invalid point")
 
-// marshalCompressed decodes a EC point, given as a compressed string.
+// unmarshalCompressed decodes a EC point, given as a compressed string.
 // If the decoding fails x and y will be nil.
 //
 // http://www.secg.org/sec1-v2.pdf
