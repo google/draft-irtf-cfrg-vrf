@@ -55,15 +55,14 @@ func i2osp(x *big.Int, rLen uint) []byte {
 // elliptic curve point type and instead directly treat the EC point as an
 // octet string per above encoding.  When using such an implementation, the
 // point_to_string function can be treated as the identity function.)
-func secg1EncodeCompressed(curve elliptic.Curve, x, y *big.Int) []byte {
+func marshalCompressed(curve elliptic.Curve, x, y *big.Int) []byte {
 	byteLen := (curve.Params().BitSize + 7) >> 3
-	ret := make([]byte, 1+byteLen)
-	ret[0] = 2 // compressed point
-
-	xBytes := x.Bytes()
-	copy(ret[1+byteLen-len(xBytes):], xBytes)
-	ret[0] += byte(y.Bit(0))
-	return ret
+	compressed := make([]byte, 1+byteLen)
+	compressed[0] = 2 // compressed point
+	compressed[0] += byte(y.Bit(0))
+	i := byteLen + 1 - len(x.Bytes())
+	copy(compressed[i:], x.Bytes())
+	return compressed
 }
 
 // This file implements compressed point unmarshaling.  Preferably this
@@ -79,9 +78,9 @@ func secg1EncodeCompressed(curve elliptic.Curve, x, y *big.Int) []byte {
 
 var errInvalidPoint = errors.New("invalid point")
 
-func secg1Decode(curve elliptic.Curve, data []byte) (x, y *big.Int, err error) {
+func unmarshalCompressed(curve elliptic.Curve, data []byte) (x, y *big.Int, err error) {
 	byteLen := (curve.Params().BitSize + 7) >> 3
-	if (data[0] &^ 1) != 2 {
+	if (data[0] &^ 1) != 2 { // compressed form
 		return nil, nil, errors.New("unrecognized point encoding")
 	}
 	if len(data) != 1+byteLen {
@@ -89,24 +88,20 @@ func secg1Decode(curve elliptic.Curve, data []byte) (x, y *big.Int, err error) {
 	}
 
 	// Based on Routine 2.2.4 in NIST Mathematical routines paper
-	params := curve.Params()
-	tx := new(big.Int).SetBytes(data[1 : 1+byteLen])
-	y2 := y2(params, tx)
-	sqrt := defaultSqrt
-	ty := sqrt(y2, params.P)
-	if ty == nil {
+	x = new(big.Int).SetBytes(data[1:])
+	y2 := y2(curve.Params(), x)
+	y = new(big.Int).ModSqrt(y2, curve.Params().P)
+	if y == nil {
 		return nil, nil, errInvalidPoint // "y^2" is not a square
 	}
-	var y2c big.Int
-	y2c.Mul(ty, ty).Mod(&y2c, params.P)
-	if y2c.Cmp(y2) != 0 {
+	if !curve.IsOnCurve(x, y) {
 		return nil, nil, errInvalidPoint // sqrt(y2)^2 != y2: invalid point
 	}
-	if ty.Bit(0) != uint(data[0]&1) {
-		ty.Sub(params.P, ty)
+	if y.Bit(0) != uint(data[0]&0x01) {
+		y.Sub(curve.Params().P, y)
 	}
 
-	return tx, ty, nil // valid point: return it
+	return x, y, nil // valid point: return x,y
 }
 
 // Use the curve equation to calculate y² given x.
@@ -123,12 +118,4 @@ func y2(curve *elliptic.CurveParams, x *big.Int) *big.Int {
 	y2.Add(y2, curve.B)
 	y2.Mod(y2, curve.P)
 	return y2
-}
-
-func defaultSqrt(x, p *big.Int) *big.Int {
-	var r big.Int
-	if nil == r.ModSqrt(x, p) {
-		return nil // x is not a square
-	}
-	return &r
 }

@@ -15,6 +15,7 @@
 package vrf
 
 import (
+	"crypto"
 	"crypto/elliptic"
 	"math/big"
 )
@@ -42,4 +43,30 @@ func NewKey(curve elliptic.Curve, sk []byte) *PrivateKey {
 		PublicKey: PublicKey{Curve: curve, X: x, Y: y}, // VRF public key Y = x*B
 		d:         new(big.Int).SetBytes(sk),           // Use SK to derive the VRF secret scalar x
 	}
+}
+
+// ECVRFParams holds shared values across ECVRF implementations.
+// ECVRFParams also has generic algorithms that rely on ECVRFAux for specific sub algorithms.
+type ECVRFParams struct {
+	suite    byte           // Single nonzero octet specifying the ECVRF ciphersuite.
+	ec       elliptic.Curve // Elliptic curve defined over F.
+	fieldLen int            // Length, in bytes, of a field element in F. Defined as 2n in spec.
+	ptLen    int            // Length, in bytes, of an EC point encoded as an octet string.
+	qLen     int            // Length, in bytes, of the prime order of the EC group (Typically ~fieldLen).
+	cofactor *big.Int       // The number of points on EC divided by the prime order of the group.
+	hash     crypto.Hash    // Cryptographic hash function.
+	aux      ECVRFAux       // Suite specific helper functions.
+}
+
+// ECVRFAux contains auxiliary functions necesary for the computation of ECVRF.
+type ECVRFAux interface {
+	// PointToString converts an EC point to an octet string.
+	PointToString(Px, Py *big.Int) []byte
+
+	// StringToPoint converts an octet string to an EC point.
+	// This function MUST output INVALID if the octet string does not decode to an EC point.
+	StringToPoint(h []byte) (Px, Py *big.Int, err error)
+
+	// ArbitraryStringToPoint converts an arbitrary 32 byte string s to an EC point.
+	ArbitraryStringToPoint(s []byte) (Px, Py *big.Int, err error)
 }
