@@ -33,13 +33,13 @@ var p256SHA256TAI p256SHA256TAISuite
 func initP256SHA256TAI() {
 	// https://tools.ietf.org/html/draft-irtf-cfrg-vrf-06#section-5.5
 	p := &ECVRFParams{
-		suiteString: []byte{0x01},    // int_to_string(1, 1)
-		ec:          elliptic.P256(), // NIST P-256 elliptic curve, [FIPS-186-4] (Section D.1.2.3).
-		n:           16,              // 2n = 32, Params().BitSize
-		qLen:        32,              // qLen = 32, Params().N.BitLen
-		ptLen:       33,              // Size of encoded EC point
-		cofactor:    1,
-		hash:        crypto.SHA256,
+		suite:    0x01,            // int_to_string(1, 1)
+		ec:       elliptic.P256(), // NIST P-256 elliptic curve, [FIPS-186-4] (Section D.1.2.3).
+		fieldLen: 32,              // Params().BitSize / 8 = 2n
+		qLen:     32,              // Params().N.BitLen
+		ptLen:    33,              // Size of encoded EC point
+		cofactor: big.NewInt(1),
+		hash:     crypto.SHA256,
 	}
 	p.aux = p256SHA256TAIAux{params: p}
 	p256SHA256TAI.ECVRFParams = p

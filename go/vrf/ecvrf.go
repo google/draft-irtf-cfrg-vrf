@@ -48,17 +48,17 @@ func NewKey(curve elliptic.Curve, sk []byte) *PrivateKey {
 // ECVRFParams holds shared values across ECVRF implementations.
 // ECVRFParams also has generic algorithms that rely on ECVRFAux for specific sub algorithms.
 type ECVRFParams struct {
-	suiteString []byte         // Single nonzero octet specifying the ECVRF ciphersuite
-	ec          elliptic.Curve // Elliptic curve defined over F
-	n           int            // 2n is the length, in bytes, of a field element in F
-	ptLen       int            // Length, in octets, of an EC point encoded as an octet string
-	qLen        int            // Length of the prime order of the EC group in octets. (Typically ~2n)
-	cofactor    byte           // The number of points on EC divided by the prime order of the group
-	hash        crypto.Hash    // Cryptographic hash function
-	aux         ECVRFAux       // Suite specific helper functions
+	suite    byte           // Single nonzero octet specifying the ECVRF ciphersuite.
+	ec       elliptic.Curve // Elliptic curve defined over F.
+	fieldLen int            // Length, in bytes, of a field element in F. Defined as 2n in spec.
+	ptLen    int            // Length, in bytes, of an EC point encoded as an octet string.
+	qLen     int            // Length, in bytes, of the prime order of the EC group (Typically ~fieldLen).
+	cofactor *big.Int       // The number of points on EC divided by the prime order of the group.
+	hash     crypto.Hash    // Cryptographic hash function.
+	aux      ECVRFAux       // Suite specific helper functions.
 }
 
-// ECVRFAux contains auxiliary functions nessesary for the computation of ECVRF.
+// ECVRFAux contains auxiliary functions necesary for the computation of ECVRF.
 type ECVRFAux interface {
 	// PointToString converts an EC point to an octet string.
 	PointToString(Px, Py *big.Int) []byte
