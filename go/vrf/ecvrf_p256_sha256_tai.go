@@ -62,7 +62,13 @@ func (a p256SHA256TAIAux) PointToString(Px, Py *big.Int) []byte {
 // INVALID if the octet string does not decode to an EC point.
 // http://www.secg.org/sec1-v2.pdf
 func (a p256SHA256TAIAux) StringToPoint(s []byte) (x, y *big.Int, err error) {
-	return unmarshalCompressed(a.params.ec, s)
+	x, y, err = unmarshalCompressed(a.params.ec, s)
+	if err != nil {
+		return nil, nil, err
+	} else if x == nil {
+		return nil, nil, errInvalidPoint
+	}
+	return x, y, nil
 }
 
 // ArbitraryString2Point returns StringToPoint(0x02 || h).
