@@ -82,6 +82,7 @@ func (a p256SHA256TAIAux) ArbitraryStringToPoint(h []byte) (Px, Py *big.Int, err
 }
 
 var zero big.Int
+var one = big.NewInt(1)
 
 // HashToCurve implements the HashToCurveTryAndIncrement algorithm from section 5.4.1.1.
 //
@@ -108,11 +109,11 @@ func (a p256SHA256TAIAux) HashToCurve(pub *PublicKey, alpha []byte) (Hx, Hy *big
 func (a p256SHA256TAIAux) hashToCurve(pub *PublicKey, alpha []byte) (Hx, Hy *big.Int, ctr byte) {
 	// 1.  ctr = 0
 	ctr = 0
-	// 2.  PK_string = point_to_string(Y)
-	pk := a.PointToString(pub.X, pub.Y)
+	// 2.  PK_string = point_to_string(pub)
+	pkStr := a.PointToString(pub.X, pub.Y)
 
 	// 3.  one_string = 0x01 = int_to_string(1, 1), a single octet with value 1
-	one := []byte{0x01}
+	oneStr := []byte{0x01}
 
 	// 4.  H = "INVALID"
 	h := a.params.hash.New()
@@ -126,8 +127,8 @@ func (a p256SHA256TAIAux) hashToCurve(pub *PublicKey, alpha []byte) (Hx, Hy *big
 		//     PK_string || alpha_string || ctr_string)
 		h.Reset()
 		h.Write([]byte{a.params.suite})
-		h.Write(one)
-		h.Write(pk)
+		h.Write(oneStr)
+		h.Write(pkStr)
 		h.Write(alpha)
 		h.Write(ctrString)
 		hashString := h.Sum(nil)
@@ -135,6 +136,9 @@ func (a p256SHA256TAIAux) hashToCurve(pub *PublicKey, alpha []byte) (Hx, Hy *big
 		Hx, Hy, err = a.ArbitraryStringToPoint(hashString)
 		// D.  If H is not "INVALID" and cofactor > 1, set H = cofactor * H
 		// Cofactor for prime ordered curves is 1.
+		if err == nil && a.params.cofactor.Cmp(one) > 0 {
+			Hx, Hy = a.params.ec.ScalarMult(Hx, Hy, a.params.cofactor.Bytes())
+		}
 		ctr++
 	}
 	ctr--

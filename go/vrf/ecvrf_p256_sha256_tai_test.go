@@ -42,6 +42,7 @@ func TestECVRF_P256_SHA256_TAI(t *testing.T) {
 		pi      []byte
 		beta    []byte
 	}{
+		// Test vectors: https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-vrf-06#appendix-A.1
 		{
 			SK:      h2b(t, "c9afa9d845ba75166b5c215767b1d6934e50c3db36e89b127b8a622b120f6721"),
 			PK:      h2b(t, "0360fed4ba255a9d31c961eb74c6356d68c049b8923b61fa6ce669622e60f29fb6"),
