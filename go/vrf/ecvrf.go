@@ -73,4 +73,7 @@ type ECVRFAux interface {
 
 	// ArbitraryStringToPoint converts an arbitrary 32 byte string s to an EC point.
 	ArbitraryStringToPoint(s []byte) (Px, Py *big.Int, err error)
+
+	// HashToCurve is a collision resistant hash of VRF input alpha to H, an EC point in G.
+	HashToCurve(Y *PublicKey, alpha []byte) (Hx, Hy *big.Int)
 }
