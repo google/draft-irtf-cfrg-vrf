@@ -69,4 +69,7 @@ type ECVRFAux interface {
 
 	// ArbitraryStringToPoint converts an arbitrary 32 byte string s to an EC point.
 	ArbitraryStringToPoint(s []byte) (Px, Py *big.Int, err error)
+
+	// GenerateNonoce generates the nonce value k in a deterministic, pseudorandom fashion.
+	GenerateNonce(sk *PrivateKey, h []byte) (k *big.Int)
 }

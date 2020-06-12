@@ -45,6 +45,30 @@ func i2osp(x *big.Int, rLen uint) []byte {
 	return b.Bytes()[uint(b.Len())-rLen:] // The rightmost rLen bytes.
 }
 
+// bits2int takes as input a sequence of blen bits and outputs a non-negative
+// integer that is less than 2^qlen.
+// https://tools.ietf.org/html/rfc6979#section-2.3.2
+func bits2int(b []byte, qlen int) *big.Int {
+	blen := len(b) * 8
+	v := new(big.Int).SetBytes(b)
+	// 1.  The sequence is first truncated or expanded to length qlen:
+	if qlen < blen {
+		// if qlen < blen, then the qlen leftmost bits are kept, and
+		// subsequent bits are discarded;
+		v = new(big.Int).Rsh(v, uint(blen-qlen))
+	} else {
+		// otherwise, qlen-blen bits (of value zero) are added to the
+		// left of the sequence (i.e., before the input bits in the
+		// sequence order).
+	}
+
+	// 2.  The resulting sequence is then converted to an integer value
+	//     using the big-endian convention: if input bits are called b_0
+	//     (leftmost) to b_(qlen-1) (rightmost), then the resulting value
+	//     is: b_0*2^(qlen-1) + b_1*2^(qlen-2) + ... + b_(qlen-1)*2^0
+	return v
+}
+
 // SECG1EncodeCompressed converts an EC point to an octet string according to
 // the encoding specified in Section 2.3.3 of [SECG1] with point compression
 // on. This implies ptLen = 2n + 1 = 33.
