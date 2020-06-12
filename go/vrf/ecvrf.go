@@ -20,6 +20,10 @@ import (
 	"math/big"
 )
 
+func init() {
+	initP256SHA256TAI()
+}
+
 // PublicKey holds a public VRF key.
 type PublicKey struct {
 	elliptic.Curve
