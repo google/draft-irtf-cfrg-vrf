@@ -16,17 +16,41 @@ package vrf
 
 import (
 	"bytes"
+	"crypto/elliptic"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"testing"
 )
 
-func h2b(t testing.TB, h string) []byte {
-	b, err := hex.DecodeString(h)
+func hd(t testing.TB, s string) []byte {
+	t.Helper()
+	b, err := hex.DecodeString(s)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return b
+}
+
+// test vector from https://tools.ietf.org/html/rfc6979#appendix-A.2.5
+func TestGenerateNonceRFC6979(t *testing.T) {
+	initP256SHA256TAI()
+	v := p256SHA256TAI
+
+	SK := &PrivateKey{
+		d: new(big.Int).SetBytes(hd(t, "C9AFA9D845BA75166B5C215767B1D6934E50C3DB36E89B127B8A622B120F6721")),
+		PublicKey: PublicKey{
+			X:     new(big.Int).SetBytes(hd(t, "60FED4BA255A9D31C961EB74C6356D68C049B8923B61FA6CE669622E60F29FB6")),
+			Y:     new(big.Int).SetBytes(hd(t, "7903FE1008B8BC99A41AE9E95628BC64F2F1B20C2D7E9F5177A3C294D4462299")),
+			Curve: elliptic.P256(),
+		},
+	}
+	m := []byte("sample")
+
+	if got, want := v.aux.GenerateNonce(SK, m).Bytes(),
+		hd(t, "A6E3C57DD01ABE90086538398355DD4C3B17AA873382B0F24D6129493D8AAD60"); !bytes.Equal(got, want) {
+		t.Errorf("k: %x, want %x", got, want)
+	}
 }
 
 func TestECVRF_P256_SHA256_TAI(t *testing.T) {
@@ -44,11 +68,11 @@ func TestECVRF_P256_SHA256_TAI(t *testing.T) {
 	}{
 		// Test vectors: https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-vrf-06#appendix-A.1
 		{
-			SK:      h2b(t, "c9afa9d845ba75166b5c215767b1d6934e50c3db36e89b127b8a622b120f6721"),
-			PK:      h2b(t, "0360fed4ba255a9d31c961eb74c6356d68c049b8923b61fa6ce669622e60f29fb6"),
+			SK:      hd(t, "c9afa9d845ba75166b5c215767b1d6934e50c3db36e89b127b8a622b120f6721"),
+			PK:      hd(t, "0360fed4ba255a9d31c961eb74c6356d68c049b8923b61fa6ce669622e60f29fb6"),
 			alpha:   []byte("sample"), // 0x73616d706c65, // (ASCII "sample")
 			wantCtr: 0,                // try_and_increment succeded on ctr = 0
-			H:       h2b(t, "02e2e1ab1b9f5a8a68fa4aad597e7493095648d3473b213bba120fe42d1a595f3e"),
+			H:       hd(t, "02e2e1ab1b9f5a8a68fa4aad597e7493095648d3473b213bba120fe42d1a595f3e"),
 			/*
 			   k = b7de5757b28c349da738409dfba70763ace31a6b15be8216991715fbc833e5fa
 			   U = k*B = 030286d82c95d54feef4d39c000f8659a5ce00a5f71d3a888bd1b8e8bf07449a50
@@ -60,11 +84,11 @@ func TestECVRF_P256_SHA256_TAI(t *testing.T) {
 			*/
 		},
 		{
-			SK:      h2b(t, "c9afa9d845ba75166b5c215767b1d6934e50c3db36e89b127b8a622b120f6721"),
-			PK:      h2b(t, "0360fed4ba255a9d31c961eb74c6356d68c049b8923b61fa6ce669622e60f29fb6"),
+			SK:      hd(t, "c9afa9d845ba75166b5c215767b1d6934e50c3db36e89b127b8a622b120f6721"),
+			PK:      hd(t, "0360fed4ba255a9d31c961eb74c6356d68c049b8923b61fa6ce669622e60f29fb6"),
 			alpha:   []byte("test"), // 74657374
 			wantCtr: 0,              // succeded on ctr = 0
-			H:       h2b(t, "02ca565721155f9fd596f1c529c7af15dad671ab30c76713889e3d45b767ff6433"),
+			H:       hd(t, "02ca565721155f9fd596f1c529c7af15dad671ab30c76713889e3d45b767ff6433"),
 			/*
 			   k = c3c4f385523b814e1794f22ad1679c952e83bff78583c85eb5c2f6ea6eee2e7d
 			   U = k*B = 034b3793d1088500ec3cccdea079beb0e2c7cdf4dccef1bbda379cc06e084f09d0
@@ -76,11 +100,11 @@ func TestECVRF_P256_SHA256_TAI(t *testing.T) {
 			*/
 		},
 		{
-			SK:      h2b(t, "2ca1411a41b17b24cc8c3b089cfd033f1920202a6c0de8abb97df1498d50d2c8"),
-			PK:      h2b(t, "03596375e6ce57e0f20294fc46bdfcfd19a39f8161b58695b3ec5b3d16427c274d"),
+			SK:      hd(t, "2ca1411a41b17b24cc8c3b089cfd033f1920202a6c0de8abb97df1498d50d2c8"),
+			PK:      hd(t, "03596375e6ce57e0f20294fc46bdfcfd19a39f8161b58695b3ec5b3d16427c274d"),
 			alpha:   []byte("Example of ECDSA with ansip256r1 and SHA-256"),
 			wantCtr: 1, // try_and_increment succeded on ctr = 1
-			H:       h2b(t, "02141e41d4d55802b0e3adaba114c81137d95fd3869b6b385d4487b1130126648d"),
+			H:       hd(t, "02141e41d4d55802b0e3adaba114c81137d95fd3869b6b385d4487b1130126648d"),
 			/*
 			   k = 6ac8f1efa102bdcdcc8db99b755d39bc995491e3f9dea076add1905a92779610
 			   U = k*B = 034bf7bd3638ef06461c6ec0cfaef7e58bfdaa971d7e36125811e629e1a1e77c8a

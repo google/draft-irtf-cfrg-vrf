@@ -76,4 +76,7 @@ type ECVRFAux interface {
 
 	// HashToCurve is a collision resistant hash of VRF input alpha to H, an EC point in G.
 	HashToCurve(Y *PublicKey, alpha []byte) (Hx, Hy *big.Int)
+
+	// GenerateNonoce generates the nonce value k in a deterministic, pseudorandom fashion.
+	GenerateNonce(sk *PrivateKey, h []byte) (k *big.Int)
 }
