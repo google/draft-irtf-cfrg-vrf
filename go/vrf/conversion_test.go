@@ -16,8 +16,6 @@ package vrf
 
 import (
 	"bytes"
-	"crypto/elliptic"
-	"crypto/rand"
 	"fmt"
 	"math/big"
 	"testing"
@@ -82,25 +80,5 @@ func TestInt2octets(t *testing.T) {
 		if got := int2octets(tc.x, tc.qlen); !bytes.Equal(got, tc.want) {
 			t.Errorf("int2octets(%v, %d):0x%x, want 0x%x", tc.x, tc.qlen, got, tc.want)
 		}
-	}
-}
-
-func TestSEG1EncodeDecode(t *testing.T) {
-	c := elliptic.P256()
-	_, Ax, Ay, err := elliptic.GenerateKey(c, rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	b := marshalCompressed(c, Ax, Ay)
-	Bx, By, err := unmarshalCompressed(c, b)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if Bx.Cmp(Ax) != 0 {
-		t.Fatalf("Bx: %v, want %v", Bx, Ax)
-	}
-	if By.Cmp(Ay) != 0 {
-		t.Fatalf("By: %v, want %v", By, Ay)
 	}
 }

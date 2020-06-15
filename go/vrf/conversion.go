@@ -16,8 +16,6 @@ package vrf
 
 import (
 	"bytes"
-	"crypto/elliptic"
-	"errors"
 	"math/big"
 )
 
@@ -117,79 +115,4 @@ func bits2octets(b []byte, q *big.Int) []byte {
 
 	// 3.  z2 is transformed into a sequence of octets (a sequence of rlen bits) by applying int2octets.
 	return int2octets(z2, q.BitLen())
-}
-
-// SECG1EncodeCompressed converts an EC point to an octet string according to
-// the encoding specified in Section 2.3.3 of [SECG1] with point compression
-// on. This implies ptLen = 2n + 1 = 33.
-//
-// SECG1 Section 2.3.3 https://www.secg.org/sec1-v1.99.dif.pdf
-//
-// (Note that certain software implementations do not introduce a separate
-// elliptic curve point type and instead directly treat the EC point as an
-// octet string per above encoding.  When using such an implementation, the
-// point_to_string function can be treated as the identity function.)
-func marshalCompressed(curve elliptic.Curve, x, y *big.Int) []byte {
-	byteLen := (curve.Params().BitSize + 7) >> 3
-	compressed := make([]byte, 1+byteLen)
-	compressed[0] = 2 // compressed point
-	compressed[0] += byte(y.Bit(0))
-	i := byteLen + 1 - len(x.Bytes())
-	copy(compressed[i:], x.Bytes())
-	return compressed
-}
-
-// This file implements compressed point unmarshaling.  Preferably this
-// functionality would be in a standard library.  Code borrowed from:
-// https://go-review.googlesource.com/#/c/1883/2/src/crypto/elliptic/elliptic.go
-
-// SECG1Decode decodes a EC point, given as a compressed string.
-// If the decoding fails x and y will be nil.
-//
-// http://www.secg.org/sec1-v2.pdf
-// https://tools.ietf.org/html/rfc8032#section-5.1.3
-// Section 4.3.6 of ANSI X9.62.
-
-var errInvalidPoint = errors.New("invalid point")
-
-func unmarshalCompressed(curve elliptic.Curve, data []byte) (x, y *big.Int, err error) {
-	byteLen := (curve.Params().BitSize + 7) >> 3
-	if (data[0] &^ 1) != 2 { // compressed form
-		return nil, nil, errors.New("unrecognized point encoding")
-	}
-	if len(data) != 1+byteLen {
-		return nil, nil, errors.New("invalid length for curve")
-	}
-
-	// Based on Routine 2.2.4 in NIST Mathematical routines paper
-	x = new(big.Int).SetBytes(data[1:])
-	y2 := y2(curve.Params(), x)
-	y = new(big.Int).ModSqrt(y2, curve.Params().P)
-	if y == nil {
-		return nil, nil, errInvalidPoint // "y^2" is not a square
-	}
-	if !curve.IsOnCurve(x, y) {
-		return nil, nil, errInvalidPoint // sqrt(y2)^2 != y2: invalid point
-	}
-	if y.Bit(0) != uint(data[0]&0x01) {
-		y.Sub(curve.Params().P, y)
-	}
-
-	return x, y, nil // valid point: return x,y
-}
-
-// Use the curve equation to calculate y² given x.
-// only applies to curves of the form y² = x³ - 3x + b.
-func y2(curve *elliptic.CurveParams, x *big.Int) *big.Int {
-	// y² = x³ - 3x + b
-	x3 := new(big.Int).Mul(x, x)
-	x3.Mul(x3, x)
-
-	threeX := new(big.Int).Lsh(x, 1)
-	threeX.Add(threeX, x)
-
-	y2 := new(big.Int).Sub(x3, threeX)
-	y2.Add(y2, curve.B)
-	y2.Mod(y2, curve.P)
-	return y2
 }
