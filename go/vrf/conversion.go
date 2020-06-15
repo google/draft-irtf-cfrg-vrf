@@ -86,7 +86,8 @@ func bits2int(b []byte, qlen int) *big.Int {
 // of octets, hence the name int2octets.
 //
 // https://tools.ietf.org/html/rfc6979#section-2.3.3
-func int2octets(x *big.Int, rlen int) []byte {
+func int2octets(x *big.Int, qlen int) []byte {
+	rlen := 8 * ((qlen + 7) >> 3) // rlen = 8*ceil(qlen/8)
 	b := x.Bytes()
 	blen := len(b) * 8
 	if blen < rlen {
@@ -100,10 +101,11 @@ func int2octets(x *big.Int, rlen int) []byte {
 	return b
 }
 
-//  bits2octets takes as input a sequence of blen bits and outputs a sequence of rlen bits.
+//  bits2octets takes as input a sequence of blen bits and outputs a sequence
+//  of rlen = 8*ceil(qlen/8) bits.
 //
 // https://datatracker.ietf.org/doc/html/rfc6979#section-2.3.4
-func bits2octets(b []byte, rlen int, q *big.Int) []byte {
+func bits2octets(b []byte, q *big.Int) []byte {
 	//  1.  The input sequence b is converted into an integer value z1 through the bits2int transform:
 	z1 := bits2int(b, q.BitLen())
 	//  2.  z1 is reduced modulo q, yielding z2 (an integer between 0 and q-1, inclusive):
@@ -114,7 +116,7 @@ func bits2octets(b []byte, rlen int, q *big.Int) []byte {
 	// z2 = z1-q if that value is non-negative; otherwise, z2 = z1.
 
 	// 3.  z2 is transformed into a sequence of octets (a sequence of rlen bits) by applying int2octets.
-	return int2octets(z2, rlen)
+	return int2octets(z2, q.BitLen())
 }
 
 // SECG1EncodeCompressed converts an EC point to an octet string according to
