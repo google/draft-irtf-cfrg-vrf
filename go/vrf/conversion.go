@@ -46,21 +46,23 @@ func i2osp(x *big.Int, rLen uint) []byte {
 }
 
 // bits2int takes as input a sequence of blen bits and outputs a non-negative
-// integer that is less than 2^qlen.
+// integer that is less than 2^qlen.  bits2int operates on byte boundaries,
+// meaning blen = 8*len(b). Returns the integer value of the qlen leftmost bits.
 // https://tools.ietf.org/html/rfc6979#section-2.3.2
 func bits2int(b []byte, qlen int) *big.Int {
 	blen := len(b) * 8
 	v := new(big.Int).SetBytes(b)
 	// 1.  The sequence is first truncated or expanded to length qlen:
 	if qlen < blen {
-		// if qlen < blen, then the qlen leftmost bits are kept, and
+		// Truncate:
+		// If qlen < blen, then the qlen leftmost bits are kept, and
 		// subsequent bits are discarded;
 		v = new(big.Int).Rsh(v, uint(blen-qlen))
-	} else {
-		// otherwise, qlen-blen bits (of value zero) are added to the
-		// left of the sequence (i.e., before the input bits in the
-		// sequence order).
 	}
+	// Expand: fill the high order bits with zeros. Happens by default.
+	// otherwise, qlen-blen bits (of value zero) are added to the
+	// left of the sequence (i.e., before the input bits in the
+	// sequence order).
 
 	// 2.  The resulting sequence is then converted to an integer value
 	//     using the big-endian convention: if input bits are called b_0
