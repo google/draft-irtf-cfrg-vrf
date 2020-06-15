@@ -18,6 +18,7 @@ import (
 	"crypto"
 	"crypto/elliptic"
 	"fmt"
+	"math"
 	"math/big"
 
 	_ "crypto/sha256"
@@ -106,7 +107,7 @@ func (a p256SHA256TAIAux) HashToCurve(pub *PublicKey, alpha []byte) (Hx, Hy *big
 	return
 }
 
-func (a p256SHA256TAIAux) hashToCurve(pub *PublicKey, alpha []byte) (Hx, Hy *big.Int, ctr byte) {
+func (a p256SHA256TAIAux) hashToCurve(pub *PublicKey, alpha []byte) (Hx, Hy *big.Int, ctr uint8) {
 	// 1.  ctr = 0
 	ctr = 0
 	// 2.  PK_string = point_to_string(pub)
@@ -138,6 +139,9 @@ func (a p256SHA256TAIAux) hashToCurve(pub *PublicKey, alpha []byte) (Hx, Hy *big
 		// Cofactor for prime ordered curves is 1.
 		if err == nil && a.params.cofactor.Cmp(one) > 0 {
 			Hx, Hy = a.params.ec.ScalarMult(Hx, Hy, a.params.cofactor.Bytes())
+		}
+		if ctr == math.MaxUint8 {
+			panic("HashToCurveTAI ctr overflow")
 		}
 		ctr++
 	}
