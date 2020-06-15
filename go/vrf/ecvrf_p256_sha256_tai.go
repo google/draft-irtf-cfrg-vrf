@@ -139,8 +139,8 @@ func (a p256SHA256TAIAux) GenerateNonce(sk *PrivateKey, h []byte) (k *big.Int) {
 	hm := hmac.New(hash.New, K)
 	hm.Write(V)
 	hm.Write([]byte{0x00})
-	hm.Write(x.Bytes()) // int2octets
-	hm.Write(h1Digest)  // bits2octets
+	hm.Write(int2octets(x, qlen))
+	hm.Write(bits2octets(h1Digest, q))
 	K = hm.Sum(nil)
 
 	// e.  Set:
@@ -155,8 +155,8 @@ func (a p256SHA256TAIAux) GenerateNonce(sk *PrivateKey, h []byte) (k *big.Int) {
 	hm = hmac.New(hash.New, K)
 	hm.Write(V)
 	hm.Write([]byte{0x01})
-	hm.Write(x.Bytes())
-	hm.Write(h1Digest)
+	hm.Write(int2octets(x, qlen))
+	hm.Write(bits2octets(h1Digest, q))
 	K = hm.Sum(nil)
 
 	// g.  Set:
