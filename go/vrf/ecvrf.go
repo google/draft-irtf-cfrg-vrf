@@ -20,6 +20,10 @@ import (
 	"math/big"
 )
 
+func init() {
+	initP256SHA256TAI()
+}
+
 // PublicKey holds a public VRF key.
 type PublicKey struct {
 	elliptic.Curve
@@ -69,6 +73,9 @@ type ECVRFAux interface {
 
 	// ArbitraryStringToPoint converts an arbitrary 32 byte string s to an EC point.
 	ArbitraryStringToPoint(s []byte) (Px, Py *big.Int, err error)
+
+	// HashToCurve is a collision resistant hash of VRF input alpha to H, an EC point in G.
+	HashToCurve(Y *PublicKey, alpha []byte) (Hx, Hy *big.Int)
 
 	// GenerateNonoce generates the nonce value k in a deterministic, pseudorandom fashion.
 	GenerateNonce(sk *PrivateKey, h []byte) (k *big.Int)
