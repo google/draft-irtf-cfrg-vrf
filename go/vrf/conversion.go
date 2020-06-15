@@ -71,6 +71,35 @@ func bits2int(b []byte, qlen int) *big.Int {
 	return v
 }
 
+// int2octets returns x as a sequence of rlen bits.
+// int2octets deviates from x.Bytes() by returning a byte slice of exact length.
+//
+// x is an integer value less than q (and, in particular, a value that has been
+// taken modulo q) as sequence of rlen bits, where rlen = 8*ceil(qlen/8).  This
+// is the sequence of bits obtained by big-endian encoding.  In other words,
+// the sequence bits x_i (for i ranging from 0 to rlen-1) are such that:
+//
+//   x = x_0*2^(rlen-1) + x_1*2^(rlen-2) + ... + x_(rlen-1)
+//
+// Since rlen is a multiple of 8 (the smallest multiple of 8 that is not
+// smaller than qlen), then the resulting sequence of bits is also a sequence
+// of octets, hence the name int2octets.
+//
+// https://tools.ietf.org/html/rfc6979#section-2.3.3
+func int2octets(x *big.Int, rlen int) []byte {
+	b := x.Bytes()
+	blen := len(b) * 8
+	if blen < rlen {
+		// left pad with rlen - blen bits
+		b = append(make([]byte, (rlen-blen)/8), b...)
+	}
+	if blen > rlen {
+		// truncate to blen bits
+		b = b[:rlen/8]
+	}
+	return b
+}
+
 // SECG1EncodeCompressed converts an EC point to an octet string according to
 // the encoding specified in Section 2.3.3 of [SECG1] with point compression
 // on. This implies ptLen = 2n + 1 = 33.

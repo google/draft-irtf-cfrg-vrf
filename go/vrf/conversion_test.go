@@ -69,6 +69,22 @@ func Testbits2int(t *testing.T) {
 	}
 }
 
+func Testint2octets(t *testing.T) {
+	for _, tc := range []struct {
+		x    *big.Int
+		rlen int
+		want []byte
+	}{
+		{x: big.NewInt(1), rlen: 0, want: []byte{0x00}},
+		{x: big.NewInt(1), rlen: 8, want: []byte{0x01}},
+		{x: big.NewInt(1), rlen: 16, want: []byte{0x00, 0x01}},
+	} {
+		if got := int2octets(tc.x, tc.rlen); !bytes.Equal(got, tc.want) {
+			t.Errorf("int2octets(%v, %d):0x%x, want 0x%x", tc.x, tc.rlen, got, tc.want)
+		}
+	}
+}
+
 func TestSEG1EncodeDecode(t *testing.T) {
 	c := elliptic.P256()
 	_, Ax, Ay, err := elliptic.GenerateKey(c, rand.Reader)
