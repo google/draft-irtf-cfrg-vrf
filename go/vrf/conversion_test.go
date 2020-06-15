@@ -51,7 +51,7 @@ func TestI2OSP(t *testing.T) {
 	}
 }
 
-func Testbits2int(t *testing.T) {
+func TestBits2int(t *testing.T) {
 	for _, tc := range []struct {
 		b    []byte
 		qlen int
@@ -69,13 +69,13 @@ func Testbits2int(t *testing.T) {
 	}
 }
 
-func Testint2octets(t *testing.T) {
+func TestInt2octets(t *testing.T) {
 	for _, tc := range []struct {
 		x    *big.Int
 		qlen int
 		want []byte
 	}{
-		{x: big.NewInt(1), qlen: 0, want: []byte{0x00}},
+		{x: big.NewInt(1), qlen: 0, want: []byte{}},
 		{x: big.NewInt(1), qlen: 8, want: []byte{0x01}},
 		{x: big.NewInt(1), qlen: 16, want: []byte{0x00, 0x01}},
 	} {
