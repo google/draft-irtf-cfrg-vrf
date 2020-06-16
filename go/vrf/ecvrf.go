@@ -85,6 +85,9 @@ type ECVRFAux interface {
 //
 // https://tools.ietf.org/html/draft-irtf-cfrg-vrf-06#section-5.4.3
 func (p ECVRFParams) hashPoints(pm ...*big.Int) (c *big.Int) {
+	if len(pm)%2 != 0 {
+		panic("odd number of inputs")
+	}
 	// 1.  two_string = 0x02 = int_to_string(2, 1), a single octet with value 2
 	// 2.  Initialize str = suite_string || two_string
 	str := []byte{p.suite, 0x02}
