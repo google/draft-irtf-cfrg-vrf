@@ -111,7 +111,7 @@ type ECVRFAux interface {
 func (p ECVRFParams) Prove(sk *PrivateKey, alpha []byte) []byte {
 	// 1.  Use SK to derive the VRF secret scalar x and the VRF public key Y = x*B
 	// 2.  H = ECVRF_hash_to_curve(suite_string, Y, alpha_string)
-	Hx, Hy := p.aux.HashToCurve(sk.Public(), alpha)
+	Hx, Hy := p.aux.HashToCurve(sk.Public(), alpha) // suite_string is implicitly used in HashToCurve
 
 	// 3.  h_string = point_to_string(H)
 	hString := p.aux.PointToString(Hx, Hy)

@@ -223,7 +223,6 @@ var one = big.NewInt(1)
 // VRF input alpha remain secret.
 //
 // Inputs:
-// - `suite` - a single octet specifying ECVRF ciphersuite.
 // - `pub`   - public key, an EC point
 // - `alpha` - value to be hashed, an octet string
 // Output:
