@@ -80,3 +80,29 @@ type ECVRFAux interface {
 	// GenerateNonoce generates the nonce value k in a deterministic, pseudorandom fashion.
 	GenerateNonce(sk *PrivateKey, h []byte) (k *big.Int)
 }
+
+// hashPoints accepts X,Y pairs of EC points in G and returns an hash value between 0 and 2^(8n)-1
+//
+// https://tools.ietf.org/html/draft-irtf-cfrg-vrf-06#section-5.4.3
+func (p ECVRFParams) hashPoints(pm ...*big.Int) (c *big.Int) {
+	// 1.  two_string = 0x02 = int_to_string(2, 1), a single octet with value 2
+	// 2.  Initialize str = suite_string || two_string
+	str := []byte{p.suite, 0x02}
+
+	// 3.  for PJ in [P1, P2, ... PM]:
+	for i := 0; i < len(pm); i += 2 {
+		// str = str || point_to_string(PJ)
+		str = append(str, p.aux.PointToString(pm[i], pm[i+1])...)
+	}
+
+	// 4.  c_string = Hash(str)
+	hc := p.hash.New()
+	hc.Write(str)
+	cString := hc.Sum(nil)
+
+	// 5.  truncated_c_string = c_string[0]...c_string[n-1]
+	n := p.fieldLen / 2 //   2n = fieldLen = 32
+	// 6.  c = string_to_int(truncated_c_string)
+	c = new(big.Int).SetBytes(cString[:n])
+	return c
+}

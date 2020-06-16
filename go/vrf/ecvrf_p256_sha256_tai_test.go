@@ -123,17 +123,31 @@ func TestECVRF_P256_SHA256_TAI(t *testing.T) {
 			if !bytes.Equal(hString, tc.H) {
 				t.Fatalf("H: %x, want %x", hString, tc.H)
 			}
-			k := aux.GenerateNonce(sk, hString).Bytes()
-			if got := k; !bytes.Equal(got, tc.k) {
+			Gx, Gy := v.Params().ec.ScalarMult(Hx, Hy, sk.d.Bytes())
+			k := aux.GenerateNonce(sk, hString)
+			if got := k.Bytes(); !bytes.Equal(got, tc.k) {
 				t.Fatalf("k: %x, want %x", k, tc.k)
 			}
-			Ux, _ := v.Params().ec.ScalarBaseMult(k)
+			Ux, Uy := v.Params().ec.ScalarBaseMult(k.Bytes())
 			if got, want := Ux.Bytes(), tc.U[1:]; !bytes.Equal(got, want) {
 				t.Errorf("U: %x, want %x", got, want)
 			}
-			Vx, _ := v.Params().ec.ScalarMult(Hx, Hy, k)
+			Vx, Vy := v.Params().ec.ScalarMult(Hx, Hy, k.Bytes())
 			if got, want := Vx.Bytes(), tc.V[1:]; !bytes.Equal(got, want) {
 				t.Errorf("V: %x, want %x", got, want)
+			}
+			c := v.hashPoints(Hx, Hy, Gx, Gy, Ux, Uy, Vx, Vy)
+			s1 := new(big.Int).Mul(c, sk.d)
+			s2 := new(big.Int).Add(k, s1)
+			s := new(big.Int).Mod(s2, v.Params().ec.Params().N)
+
+			pi := new(bytes.Buffer)
+			pi.Write(v.aux.PointToString(Gx, Gy))
+			pi.Write(c.Bytes())
+			pi.Write(s.Bytes())
+
+			if got := pi.Bytes(); !bytes.Equal(got, tc.pi) {
+				t.Errorf("pi: %x, want %x", got, tc.pi)
 			}
 		})
 	}
