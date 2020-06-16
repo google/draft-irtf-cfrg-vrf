@@ -74,9 +74,9 @@ type ECVRF interface {
 type ECVRFParams struct {
 	suite    byte           // Single nonzero octet specifying the ECVRF ciphersuite.
 	ec       elliptic.Curve // Elliptic curve defined over F.
-	fieldLen int            // Length, in bytes, of a field element in F. Defined as 2n in spec.
-	ptLen    int            // Length, in bytes, of an EC point encoded as an octet string.
-	qLen     int            // Length, in bytes, of the prime order of the EC group (Typically ~fieldLen).
+	fieldLen uint           // Length, in bytes, of a field element in F. Defined as 2n in spec.
+	ptLen    uint           // Length, in bytes, of an EC point encoded as an octet string.
+	qLen     uint           // Length, in bytes, of the prime order of the EC group (Typically ~fieldLen).
 	cofactor *big.Int       // The number of points on EC divided by the prime order of the group.
 	hash     crypto.Hash    // Cryptographic hash function.
 	aux      ECVRFAux       // Suite specific helper functions.
@@ -90,6 +90,9 @@ type ECVRFAux interface {
 	// StringToPoint converts an octet string to an EC point.
 	// This function MUST output INVALID if the octet string does not decode to an EC point.
 	StringToPoint(h []byte) (Px, Py *big.Int, err error)
+
+	// IntToString converts a nonnegative integer a to to octet string of length rLen.
+	IntToString(x *big.Int, rLen uint) []byte
 
 	// ArbitraryStringToPoint converts an arbitrary 32 byte string s to an EC point.
 	ArbitraryStringToPoint(s []byte) (Px, Py *big.Int, err error)
@@ -132,8 +135,8 @@ func (p ECVRFParams) Prove(sk *PrivateKey, alpha []byte) []byte {
 	// 8.  pi_string = point_to_string(Gamma) || int_to_string(c, n) || int_to_string(s, qLen)
 	pi := new(bytes.Buffer)
 	pi.Write(p.aux.PointToString(Gx, Gy))
-	pi.Write(c.Bytes())
-	pi.Write(s.Bytes())
+	pi.Write(p.aux.IntToString(c, p.fieldLen/2)) // 2n = fieldLen
+	pi.Write(p.aux.IntToString(s, p.qLen))
 
 	return pi.Bytes()
 }

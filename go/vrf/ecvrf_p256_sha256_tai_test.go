@@ -144,8 +144,8 @@ func TestECVRF_P256_SHA256_TAI(t *testing.T) {
 
 			pi := new(bytes.Buffer)
 			pi.Write(v.aux.PointToString(Gx, Gy))
-			pi.Write(c.Bytes())
-			pi.Write(s.Bytes())
+			pi.Write(v.aux.IntToString(c, v.fieldLen/2)) // 2n = fieldLen
+			pi.Write(v.aux.IntToString(s, v.qLen))
 
 			if got := pi.Bytes(); !bytes.Equal(got, tc.pi) {
 				t.Errorf("pi: %x, want %x", got, tc.pi)

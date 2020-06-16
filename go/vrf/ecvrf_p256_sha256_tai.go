@@ -74,6 +74,10 @@ func (a p256SHA256TAIAux) StringToPoint(s []byte) (x, y *big.Int, err error) {
 	return x, y, nil
 }
 
+func (a p256SHA256TAIAux) IntToString(x *big.Int, xLen uint) []byte {
+	return i2osp(x, xLen) // RFC8017 Section 4.1 (big endian representation)
+}
+
 // ArbitraryString2Point returns StringToPoint(0x02 || h).
 // Attempts to interpret an arbitrary string as a compressed elliptic code point.
 // The input h is a 32-octet string.  Returns either an EC point or "INVALID".
