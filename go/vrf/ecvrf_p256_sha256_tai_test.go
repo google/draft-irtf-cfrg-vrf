@@ -20,6 +20,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"sync"
 	"testing"
 )
 
@@ -148,6 +149,32 @@ func TestECVRF_P256_SHA256_TAI(t *testing.T) {
 
 			if got := pi.Bytes(); !bytes.Equal(got, tc.pi) {
 				t.Errorf("pi: %x, want %x", got, tc.pi)
+			}
+
+			if pi := v.Prove(sk, tc.alpha); !bytes.Equal(pi, tc.pi) {
+				t.Errorf("Prove(%s): %x, want %x", tc.alpha, pi, tc.pi)
+			}
+		})
+	}
+}
+
+func BenchmarkProveECVRFP256SHA256TAI(b *testing.B) {
+	v := ECVRFP256SHA256TAI()
+	sk := NewKey(v.Params().ec,
+		hd(b, "2ca1411a41b17b24cc8c3b089cfd033f1920202a6c0de8abb97df1498d50d2c8"))
+	m1 := []byte("data1")
+	for _, routines := range []int{1, 2, 4, 8, 16, 32, 64, 128} {
+		b.Run(fmt.Sprintf("%d goroutines", routines), func(b *testing.B) {
+			var wg sync.WaitGroup
+			defer wg.Wait()
+			for i := 0; i < routines; i++ {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					for n := 0; n < b.N/routines; n++ {
+						v.Prove(sk, m1)
+					}
+				}()
 			}
 		})
 	}

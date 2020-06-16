@@ -15,13 +15,24 @@
 package vrf
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/elliptic"
 	"math/big"
+	"sync"
 )
 
-func init() {
+var initonce sync.Once
+
+func initAll() {
 	initP256SHA256TAI()
+}
+
+// ECVRFP256SHA256TAI returns a elliptic curve based VRF instantiated with
+// P256, SHA256, and the "Try And Increment" strategy for hashing to the curve.
+func ECVRFP256SHA256TAI() ECVRF {
+	initonce.Do(initAll)
+	return p256SHA256TAI
 }
 
 // PublicKey holds a public VRF key.
@@ -47,6 +58,15 @@ func NewKey(curve elliptic.Curve, sk []byte) *PrivateKey {
 		PublicKey: PublicKey{Curve: curve, X: x, Y: y}, // VRF public key Y = x*B
 		d:         new(big.Int).SetBytes(sk),           // Use SK to derive the VRF secret scalar x
 	}
+}
+
+type ECVRF interface {
+	Params() *ECVRFParams
+
+	// Prove returns proof pi that beta is the correct hash output.
+	// beta is deterministic in the sense that it always
+	// produces the same output beta given a pair of inputs (sk, alpha).
+	Prove(sk *PrivateKey, alpha []byte) (pi []byte)
 }
 
 // ECVRFParams holds shared values across ECVRF implementations.
@@ -79,6 +99,43 @@ type ECVRFAux interface {
 
 	// GenerateNonoce generates the nonce value k in a deterministic, pseudorandom fashion.
 	GenerateNonce(sk *PrivateKey, h []byte) (k *big.Int)
+}
+
+// Prove returns proof pi that beta is the correct hash output.
+// sk - VRF private key
+// alpha - input alpha, an octet string
+// Returns pi - VRF proof, octet string of length ptLen+n+qLen
+func (p ECVRFParams) Prove(sk *PrivateKey, alpha []byte) []byte {
+	// 1.  Use SK to derive the VRF secret scalar x and the VRF public key Y = x*B
+	// 2.  H = ECVRF_hash_to_curve(suite_string, Y, alpha_string)
+	Hx, Hy := p.aux.HashToCurve(sk.Public(), alpha)
+
+	// 3.  h_string = point_to_string(H)
+	hString := p.aux.PointToString(Hx, Hy)
+
+	// 4.  Gamma = x*H
+	Gx, Gy := p.ec.ScalarMult(Hx, Hy, sk.d.Bytes())
+
+	// 5.  k = ECVRF_nonce_generation(SK, h_string)
+	k := p.aux.GenerateNonce(sk, hString)
+
+	// 6.  c = ECVRF_hash_points(H, Gamma, k*B, k*H)
+	Ux, Uy := p.ec.ScalarBaseMult(k.Bytes())
+	Vx, Vy := p.ec.ScalarMult(Hx, Hy, k.Bytes())
+	c := p.hashPoints(Hx, Hy, Gx, Gy, Ux, Uy, Vx, Vy)
+
+	// 7.  s = (k + c*x) mod q
+	s1 := new(big.Int).Mul(c, sk.d)
+	s2 := new(big.Int).Add(k, s1)
+	s := new(big.Int).Mod(s2, p.ec.Params().N)
+
+	// 8.  pi_string = point_to_string(Gamma) || int_to_string(c, n) || int_to_string(s, qLen)
+	pi := new(bytes.Buffer)
+	pi.Write(p.aux.PointToString(Gx, Gy))
+	pi.Write(c.Bytes())
+	pi.Write(s.Bytes())
+
+	return pi.Bytes()
 }
 
 // hashPoints accepts X,Y pairs of EC points in G and returns an hash value between 0 and 2^(8n)-1
