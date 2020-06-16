@@ -128,9 +128,9 @@ func (p ECVRFParams) Prove(sk *PrivateKey, alpha []byte) []byte {
 	c := p.hashPoints(Hx, Hy, Gx, Gy, Ux, Uy, Vx, Vy)
 
 	// 7.  s = (k + c*x) mod q
-	s1 := new(big.Int).Mul(c, sk.d)
-	s2 := new(big.Int).Add(k, s1)
-	s := new(big.Int).Mod(s2, p.ec.Params().N)
+	s := new(big.Int).Mul(c, sk.d)
+	s.Add(k, s)
+	s.Mod(s, p.ec.Params().N)
 
 	// 8.  pi_string = point_to_string(Gamma) || int_to_string(c, n) || int_to_string(s, qLen)
 	pi := new(bytes.Buffer)
