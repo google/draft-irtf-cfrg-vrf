@@ -38,7 +38,7 @@ func initP256SHA256TAI() {
 	p := &ECVRFParams{
 		suite:    0x01,            // int_to_string(1, 1)
 		ec:       elliptic.P256(), // NIST P-256 elliptic curve, [FIPS-186-4] (Section D.1.2.3).
-		fieldLen: 32,              // Params().BitSize / 8 = 2n
+		fieldLen: 32,              // Params().BitSize / 8 = 2n. Must be a multiple of 2.
 		qLen:     32,              // Params().N.BitLen
 		ptLen:    33,              // Size of encoded EC point
 		cofactor: big.NewInt(1),
@@ -72,6 +72,10 @@ func (a p256SHA256TAIAux) StringToPoint(s []byte) (x, y *big.Int, err error) {
 		return nil, nil, errInvalidPoint
 	}
 	return x, y, nil
+}
+
+func (a p256SHA256TAIAux) IntToString(x *big.Int, xLen uint) []byte {
+	return i2osp(x, xLen) // RFC8017 Section 4.1 (big endian representation)
 }
 
 // ArbitraryString2Point returns StringToPoint(0x02 || h).
@@ -219,7 +223,6 @@ var one = big.NewInt(1)
 // VRF input alpha remain secret.
 //
 // Inputs:
-// - `suite` - a single octet specifying ECVRF ciphersuite.
 // - `pub`   - public key, an EC point
 // - `alpha` - value to be hashed, an octet string
 // Output:
@@ -237,7 +240,6 @@ func (a p256SHA256TAIAux) hashToCurve(pub *PublicKey, alpha []byte) (Hx, Hy *big
 	pkStr := a.PointToString(pub.X, pub.Y)
 
 	// 3.  one_string = 0x01 = int_to_string(1, 1), a single octet with value 1
-	oneStr := []byte{0x01}
 
 	// 4.  H = "INVALID"
 	h := a.params.hash.New()
@@ -245,16 +247,14 @@ func (a p256SHA256TAIAux) hashToCurve(pub *PublicKey, alpha []byte) (Hx, Hy *big
 	// 5.  While H is "INVALID" or H is EC point at infinity:
 	var err error
 	for Hx == nil || err != nil || (zero.Cmp(Hx) == 0 && zero.Cmp(Hy) == 0) {
-		// A.  ctr_string = int_to_string(ctr, 1)
-		ctrString := []byte{ctr}
+		// A. ctr_string = int_to_string(ctr, 1)
 		// B.  hash_string = Hash(suite_string || one_string ||
 		//     PK_string || alpha_string || ctr_string)
 		h.Reset()
-		h.Write([]byte{a.params.suite})
-		h.Write(oneStr)
+		h.Write([]byte{a.params.suite, 0x01})
 		h.Write(pkStr)
 		h.Write(alpha)
-		h.Write(ctrString)
+		h.Write([]byte{ctr}) // ctr_string = int_to_string(ctr, 1)
 		hashString := h.Sum(nil)
 		// C.  H = arbitrary_string_to_point(hash_string)
 		Hx, Hy, err = a.ArbitraryStringToPoint(hashString)
