@@ -240,7 +240,6 @@ func (a p256SHA256TAIAux) hashToCurve(pub *PublicKey, alpha []byte) (Hx, Hy *big
 	pkStr := a.PointToString(pub.X, pub.Y)
 
 	// 3.  one_string = 0x01 = int_to_string(1, 1), a single octet with value 1
-	oneStr := []byte{0x01}
 
 	// 4.  H = "INVALID"
 	h := a.params.hash.New()
@@ -248,16 +247,14 @@ func (a p256SHA256TAIAux) hashToCurve(pub *PublicKey, alpha []byte) (Hx, Hy *big
 	// 5.  While H is "INVALID" or H is EC point at infinity:
 	var err error
 	for Hx == nil || err != nil || (zero.Cmp(Hx) == 0 && zero.Cmp(Hy) == 0) {
-		// A.  ctr_string = int_to_string(ctr, 1)
-		ctrString := []byte{ctr}
+		// A. ctr_string = int_to_string(ctr, 1)
 		// B.  hash_string = Hash(suite_string || one_string ||
 		//     PK_string || alpha_string || ctr_string)
 		h.Reset()
-		h.Write([]byte{a.params.suite})
-		h.Write(oneStr)
+		h.Write([]byte{a.params.suite, 0x01})
 		h.Write(pkStr)
 		h.Write(alpha)
-		h.Write(ctrString)
+		h.Write([]byte{ctr}) // ctr_string = int_to_string(ctr, 1)
 		hashString := h.Sum(nil)
 		// C.  H = arbitrary_string_to_point(hash_string)
 		Hx, Hy, err = a.ArbitraryStringToPoint(hashString)
