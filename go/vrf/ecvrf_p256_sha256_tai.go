@@ -38,7 +38,7 @@ func initP256SHA256TAI() {
 	p := &ECVRFParams{
 		suite:    0x01,            // int_to_string(1, 1)
 		ec:       elliptic.P256(), // NIST P-256 elliptic curve, [FIPS-186-4] (Section D.1.2.3).
-		fieldLen: 32,              // Params().BitSize / 8 = 2n
+		fieldLen: 32,              // Params().BitSize / 8 = 2n. Must be a multiple of 2.
 		qLen:     32,              // Params().N.BitLen
 		ptLen:    33,              // Size of encoded EC point
 		cofactor: big.NewInt(1),
