@@ -177,6 +177,8 @@ func TestECVRF_P256_SHA256_TAI(t *testing.T) {
 			if !bytes.Equal(beta, beta2) {
 				t.Errorf("beta: %x, beta2: %x", beta, beta2)
 			}
+
+			t.Logf("Fuzz test vector: %x%x%x", tc.SK, tc.pi, tc.alpha)
 		})
 	}
 }
