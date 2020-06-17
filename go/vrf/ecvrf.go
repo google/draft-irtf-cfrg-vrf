@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/elliptic"
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -75,6 +76,9 @@ type ECVRF interface {
 	// ProofToHash should be run only on pi that is known to have been produced by Prove
 	// Clients attempting to verify untrusted inputs should use Verify.
 	ProofToHash(pi []byte) (beta []byte, err error)
+
+	// Verify that beta is the correct VRF hash of alpha using PublicKey pub.
+	Verify(pub *PublicKey, pi, alpha []byte) (beta []byte, err error)
 }
 
 // ECVRFParams holds shared values across ECVRF implementations.
@@ -178,8 +182,50 @@ func (p ECVRFParams) ProofToHash(pi []byte) (beta []byte, err error) {
 	return h.Sum(nil), nil
 }
 
+// Verify that beta is the correct VRF hash of alpha using PublicKey pub.
 //
-// Auxilary functions
+// Input:
+//    pub - public key, an EC point
+//    pi_string - VRF proof, octet string of length ptLen+n+qLen
+//    alpha_string - VRF input, octet string
+//
+// Output:
+//    beta, the VRF hash output, octet string of length hLen; or "INVALID"
+func (p ECVRFParams) Verify(pub *PublicKey, pi, alpha []byte) (beta []byte, err error) {
+	// 1.  D = ECVRF_decode_proof(pi_string)
+	Gx, Gy, c, s, err := p.decodeProof(pi)
+	// 2.  If D is "INVALID", output "INVALID" and stop
+	if err != nil {
+		return nil, err
+	}
+	// 3.  (Gamma, c, s) = D
+
+	// 4.  H = ECVRF_hash_to_curve(suite_string, Y, alpha_string)
+	Hx, Hy := p.aux.HashToCurve(pub, alpha)
+
+	// 5.  U = s*B - c*Y
+	U1x, U1y := p.ec.ScalarBaseMult(s.Bytes())
+	U2x, U2y := p.ec.ScalarMult(pub.X, pub.Y, c.Bytes())
+	Ux, Uy := p.ec.Add(U1x, U1y, U2x, new(big.Int).Neg(U2y)) // -(U2x, U2y) = (U2x, -U2y)
+
+	// 6.  V = s*H - c*Gamma
+	V1x, V1y := p.ec.ScalarMult(Hx, Hy, s.Bytes())
+	V2x, V2y := p.ec.ScalarMult(Gx, Gy, c.Bytes())
+	Vx, Vy := p.ec.Add(V1x, V1y, V2x, new(big.Int).Neg(V2y))
+
+	// 7.  c' = ECVRF_hash_points(H, Gamma, U, V)
+	cPrime := p.hashPoints(Hx, Hy, Gx, Gy, Ux, Uy, Vx, Vy)
+
+	// 8.  If c and c' are not equal output "INVALID"
+	if c.Cmp(cPrime) != 0 {
+		return nil, errors.New("invalid")
+	}
+	// else, output (ECVRF_proof_to_hash(pi_string), "VALID")
+	return p.ProofToHash(pi)
+}
+
+//
+// Auxiliary functions
 //
 
 // hashPoints accepts X,Y pairs of EC points in G and returns an hash value between 0 and 2^(8n)-1
