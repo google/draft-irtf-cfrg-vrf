@@ -185,13 +185,12 @@ func (p ECVRFParams) ProofToHash(pi []byte) (beta []byte, err error) {
 // Verify that beta is the correct VRF hash of alpha using PublicKey pub.
 //
 // Input:
-//    Y - public key, an EC point
+//    pub - public key, an EC point
 //    pi_string - VRF proof, octet string of length ptLen+n+qLen
-//      alpha_string - VRF input, octet string
+//    alpha_string - VRF input, octet string
 //
 // Output:
-//    (beta_string, "VALID"), where beta_string is the VRF hash output,
-//    octet string of length hLen; or "INVALID"
+//    beta, the VRF hash output, octet string of length hLen; or "INVALID"
 func (p ECVRFParams) Verify(pub *PublicKey, pi, alpha []byte) (beta []byte, err error) {
 	// 1.  D = ECVRF_decode_proof(pi_string)
 	Gx, Gy, c, s, err := p.decodeProof(pi)
@@ -226,7 +225,7 @@ func (p ECVRFParams) Verify(pub *PublicKey, pi, alpha []byte) (beta []byte, err 
 }
 
 //
-// Auxilary functions
+// Auxiliary functions
 //
 
 // hashPoints accepts X,Y pairs of EC points in G and returns an hash value between 0 and 2^(8n)-1
