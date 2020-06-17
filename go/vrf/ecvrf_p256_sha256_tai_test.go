@@ -142,17 +142,26 @@ func TestECVRF_P256_SHA256_TAI(t *testing.T) {
 			s2 := new(big.Int).Add(k, s1)
 			s := new(big.Int).Mod(s2, v.Params().ec.Params().N)
 
-			pi := new(bytes.Buffer)
-			pi.Write(v.aux.PointToString(Gx, Gy))
-			pi.Write(v.aux.IntToString(c, v.fieldLen/2)) // 2n = fieldLen
-			pi.Write(v.aux.IntToString(s, v.qLen))
+			pib := new(bytes.Buffer)
+			pib.Write(v.aux.PointToString(Gx, Gy))
+			pib.Write(v.aux.IntToString(c, v.fieldLen/2)) // 2n = fieldLen
+			pib.Write(v.aux.IntToString(s, v.qLen))
 
-			if got := pi.Bytes(); !bytes.Equal(got, tc.pi) {
+			if got := pib.Bytes(); !bytes.Equal(got, tc.pi) {
 				t.Errorf("pi: %x, want %x", got, tc.pi)
 			}
 
-			if pi := v.Prove(sk, tc.alpha); !bytes.Equal(pi, tc.pi) {
+			pi := v.Prove(sk, tc.alpha)
+			if !bytes.Equal(pi, tc.pi) {
 				t.Errorf("Prove(%s): %x, want %x", tc.alpha, pi, tc.pi)
+			}
+
+			beta, err := v.ProofToHash(pi)
+			if err != nil {
+				t.Fatalf("ProofToHash(): %v", err)
+			}
+			if !bytes.Equal(beta, tc.beta) {
+				t.Errorf("beta: %x, want %x", beta, tc.beta)
 			}
 		})
 	}

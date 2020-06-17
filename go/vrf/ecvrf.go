@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/elliptic"
+	"fmt"
 	"math/big"
 	"sync"
 )
@@ -67,6 +68,13 @@ type ECVRF interface {
 	// beta is deterministic in the sense that it always
 	// produces the same output beta given a pair of inputs (sk, alpha).
 	Prove(sk *PrivateKey, alpha []byte) (pi []byte)
+
+	// ProofToHash allows anyone to deterministically obtain the VRF hash
+	// output beta directly from the proof value pi.
+	//
+	// ProofToHash should be run only on pi that is known to have been produced by Prove
+	// Clients attempting to verify untrusted inputs should use Verify.
+	ProofToHash(pi []byte) (beta []byte, err error)
 }
 
 // ECVRFParams holds shared values across ECVRF implementations.
@@ -141,6 +149,39 @@ func (p ECVRFParams) Prove(sk *PrivateKey, alpha []byte) []byte {
 	return pi.Bytes()
 }
 
+// ProofToHash returns VRF hash output beta from VRF proof pi.
+//
+// Input: pi - VRF proof, octet string of length ptLen+n+qLen
+// Output: beta - VRF hash output, octet string of length hLen or "INVALID"
+//
+// ProofToHash should be run only on pi that is known to have been produced by
+// Prove, or from within Verify.
+//
+// https://tools.ietf.org/html/draft-irtf-cfrg-vrf-06#section-5.2
+func (p ECVRFParams) ProofToHash(pi []byte) (beta []byte, err error) {
+	// 1.  D = ECVRF_decode_proof(pi_string)
+	Gx, Gy, _, _, err := p.decodeProof(pi)
+	// 2.  If D is "INVALID", output "INVALID" and stop
+	if err != nil {
+		return nil, err
+	}
+
+	// 3.  (Gamma, c, s) = D
+	// 4.  three_string = 0x03 = int_to_string(3, 1), a single octet with value 3
+
+	// 5.  beta_string = Hash(suite_string || three_string || point_to_string(cofactor * Gamma))
+	h := p.hash.New()
+	h.Write([]byte{p.suite, 0x03})
+	h.Write(p.aux.PointToString(p.ec.ScalarMult(Gx, Gy, p.cofactor.Bytes())))
+
+	// 6.  Output beta_string
+	return h.Sum(nil), nil
+}
+
+//
+// Auxilary functions
+//
+
 // hashPoints accepts X,Y pairs of EC points in G and returns an hash value between 0 and 2^(8n)-1
 //
 // https://tools.ietf.org/html/draft-irtf-cfrg-vrf-06#section-5.4.3
@@ -168,4 +209,43 @@ func (p ECVRFParams) hashPoints(pm ...*big.Int) (c *big.Int) {
 	// 6.  c = string_to_int(truncated_c_string)
 	c = new(big.Int).SetBytes(cString[:n])
 	return c
+}
+
+// decodeProof
+//
+// Input: pi_string - VRF proof, octet string (ptLen+n+qLen octets)
+//
+// Output:
+//    Gx, Gy - Gamma - EC point
+//    c - integer between 0 and 2^(8n)-1
+//    s - integer between 0 and 2^(8qLen)-1
+//    or "INVALID"
+//
+// https://tools.ietf.org/html/draft-irtf-cfrg-vrf-06#section-5.4.4
+func (p ECVRFParams) decodeProof(pi []byte) (Gx, Gy, c, s *big.Int, err error) {
+	n := p.fieldLen / 2
+	if got, want := uint(len(pi)), p.ptLen+n+p.qLen; got != want {
+		return nil, nil, nil, nil, fmt.Errorf("len(pi): %v, want %v", got, want)
+	}
+
+	//    1.  let gamma_string = pi_string[0]...p_string[ptLen-1]
+	gStr := pi[:p.ptLen]
+	//    2.  let c_string = pi_string[ptLen]...pi_string[ptLen+n-1]
+	cStr := pi[p.ptLen : p.ptLen+n]
+	//    3.  let s_string =pi_string[ptLen+n]...pi_string[ptLen+n+qLen-1]
+	sStr := pi[p.ptLen+n:]
+
+	//    4.  Gamma = string_to_point(gamma_string)
+	Gx, Gy, err = p.aux.StringToPoint(gStr)
+	//    5.  if Gamma = "INVALID" output "INVALID" and stop.
+	if err != nil || Gx == nil || Gy == nil {
+		return nil, nil, nil, nil, fmt.Errorf("aux.StringToPoint() failed: %w", err)
+	}
+
+	//    6.  c = string_to_int(c_string)
+	c = new(big.Int).SetBytes(cStr)
+	//    7.  s = string_to_int(s_string)
+	s = new(big.Int).SetBytes(sStr)
+	//    8.  Output Gamma, c, and s
+	return Gx, Gy, c, s, nil
 }
