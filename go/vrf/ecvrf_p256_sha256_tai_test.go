@@ -163,6 +163,14 @@ func TestECVRF_P256_SHA256_TAI(t *testing.T) {
 			if !bytes.Equal(beta, tc.beta) {
 				t.Errorf("beta: %x, want %x", beta, tc.beta)
 			}
+
+			beta2, err := v.Verify(sk.Public(), pi, tc.alpha)
+			if err != nil {
+				t.Errorf("Verify(): %v", err)
+			}
+			if !bytes.Equal(beta, beta2) {
+				t.Errorf("beta: %x, beta2: %x", beta, beta2)
+			}
 		})
 	}
 }
