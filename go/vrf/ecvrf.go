@@ -233,7 +233,7 @@ func (p ECVRFParams) decodeProof(pi []byte) (Gx, Gy, c, s *big.Int, err error) {
 	//    2.  let c_string = pi_string[ptLen]...pi_string[ptLen+n-1]
 	cStr := pi[p.ptLen : p.ptLen+n]
 	//    3.  let s_string =pi_string[ptLen+n]...pi_string[ptLen+n+qLen-1]
-	sStr := pi[p.ptLen+n : p.ptLen+n+p.qLen]
+	sStr := pi[p.ptLen+n:]
 
 	//    4.  Gamma = string_to_point(gamma_string)
 	Gx, Gy, err = p.aux.StringToPoint(gStr)
