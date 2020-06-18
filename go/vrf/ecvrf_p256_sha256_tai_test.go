@@ -54,20 +54,22 @@ func TestGenerateNonceRFC6979(t *testing.T) {
 	}
 }
 
-func TestECVRF_P256_SHA256_TAI(t *testing.T) {
-	for i, tc := range []struct {
-		SK      []byte
-		PK      []byte
-		alpha   []byte
-		wantCtr byte
-		H       []byte
-		k       []byte
-		U       []byte // k*B
-		V       []byte // k*H
-		pi      []byte
-		beta    []byte
-	}{
-		// Test vectors: https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-vrf-06#appendix-A.1
+// Test vectors: https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-vrf-06#appendix-A.1
+type P256SHA256TAITestVector struct {
+	SK      []byte
+	PK      []byte
+	alpha   []byte
+	wantCtr byte
+	H       []byte
+	k       []byte
+	U       []byte // k*B
+	V       []byte // k*H
+	pi      []byte
+	beta    []byte
+}
+
+func P256SHA256TAITestVectors(t *testing.T) []P256SHA256TAITestVector {
+	return []P256SHA256TAITestVector{
 		{
 			SK:      hd(t, "c9afa9d845ba75166b5c215767b1d6934e50c3db36e89b127b8a622b120f6721"),
 			PK:      hd(t, "0360fed4ba255a9d31c961eb74c6356d68c049b8923b61fa6ce669622e60f29fb6"),
@@ -110,7 +112,11 @@ func TestECVRF_P256_SHA256_TAI(t *testing.T) {
 				"33e11d0c5bf932b8f0c5ed1981b64"),
 			beta: hd(t, "e880bde34ac5263b2ce5c04626870be2cbff1edcdadabd7d4cb7cbc696467168"),
 		},
-	} {
+	}
+}
+
+func TestECVRF_P256_SHA256_TAI(t *testing.T) {
+	for i, tc := range P256SHA256TAITestVectors(t) {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			v := p256SHA256TAI
 			aux := v.aux.(p256SHA256TAIAux)
