@@ -56,36 +56,37 @@ func (s p256SHA256SWUSuite) Params() *ECVRFParams { return s.ECVRFParams }
 // HashToCurve implements the Simplified SWU algorithm from section 5.4.1.3.
 // SWU is implemented with running time that is independent of the input
 // alpha (so-called "constant-time").
-func (aux p256SHA256SWUAux) HashToCurve(pub *PublicKey, alpha []byte) (x, y *big.Int) {
-	x, y, _, _ = aux.hashToCurve(pub, alpha)
-	return
-}
-
-// hashToCurveSimplifiedSWU
+//
+// WARNING: The big.Int operations used by HashToCurve are *not* constant time.
+// See: https://github.com/golang/go/issues/20654
+//
 // Input:
-//    suite_string - a single octet specifying ECVRF ciphersuite.
-//    pub - public key, an EC point
-//    alpha_string - value to be hashed, an octet string
+//    `pub` - public key, an EC point
+//    `alpha` - value to be hashed, an octet string
 // Output:
 //    Hx, Hy - hashed value, a finite EC point in G
 //
 // https://tools.ietf.org/html/draft-irtf-cfrg-vrf-06#section-5.4.1.3
-func (aux *p256SHA256SWUAux) hashToCurve(pub *PublicKey, alpha []byte) (hx, hy, t, w *big.Int) {
+func (a p256SHA256SWUAux) HashToCurve(pub *PublicKey, alpha []byte) (Hx, Hy *big.Int) {
+	Hx, Hy, _, _ = a.hashToCurve(pub, alpha)
+	return
+}
+
+var two = big.NewInt(2)
+
+func (a *p256SHA256SWUAux) hashToCurve(pub *PublicKey, alpha []byte) (Hx, Hy, t, w *big.Int) {
 	// Fixed options:
 	// a and b, constants for the Weierstrass form elliptic curve
 	// equation y^2 = x^3 + ax +b for the curve E
-	p := aux.params.ec.Params().P
-	a := big.NewInt(-3) // A Curve represents a short-form Weierstrass curve with a=-3.
-	b := aux.params.ec.Params().B
-	one := big.NewInt(1)
-	two := big.NewInt(2)
+	p := a.params.ec.Params().P
+	A := big.NewInt(-3) // A Curve represents a short-form Weierstrass curve with a=-3.
 
 	// 1.   PK_string = EC2OSP(Y)
 	// 2.   one_string = 0x01 = I2OSP(1, 1), a single octet with value 1
 	// 3.   t_string = Hash(suite_string || one_string || PK_string || alpha_string)
-	th := aux.params.hash.New()
-	th.Write([]byte{aux.params.suite, 0x01})
-	th.Write(aux.PointToString(pub.X, pub.Y))
+	th := a.params.hash.New()
+	th.Write([]byte{a.params.suite, 0x01})
+	th.Write(a.PointToString(pub.X, pub.Y))
 	th.Write(alpha)
 
 	// 4.   t = string_to_int(t_string) mod p
@@ -110,7 +111,9 @@ func (aux *p256SHA256SWUAux) hashToCurve(pub *PublicKey, alpha []byte) (hx, hy, 
 
 	// 8.   x = ((-b/a) * (1 + d_inverse)) mod p
 	//      c = -b/a
-	c := new(big.Int).Mul(new(big.Int).Neg(b), new(big.Int).ModInverse(a, p))
+	c := new(big.Int).Mul(
+		new(big.Int).Neg(a.params.ec.Params().B),
+		new(big.Int).ModInverse(A, p))
 	c.Mod(c, p)
 	//      x = (c * (1 + d_inverse)) mod p
 	x := new(big.Int).Mul(c, new(big.Int).Add(one, dI))
@@ -120,8 +123,8 @@ func (aux *p256SHA256SWUAux) hashToCurve(pub *PublicKey, alpha []byte) (hx, hy, 
 	//      (this step evaluates the curve equation)
 	w = new(big.Int).Mul(x, x)
 	w.Mul(w, x)
-	w.Add(w, new(big.Int).Mul(a, x))
-	w.Add(w, b)
+	w.Add(w, new(big.Int).Mul(A, x))
+	w.Add(w, a.params.ec.Params().B)
 	w.Mod(w, p)
 
 	// 10.  Let e equal the Legendre symbol of w and p (see note below on how to compute e)
@@ -161,11 +164,11 @@ func (aux *p256SHA256SWUAux) hashToCurve(pub *PublicKey, alpha []byte) (hx, hy, 
 	//   12.  H_prelim = arbitrary_string_to_point(int_to_string(final_x, 2n))
 	//        (note: arbitrary_string_to_point will not return INVALID by
 	//        correctness of Simple SWU)
-	hx, hy, _ = aux.ArbitraryStringToPoint(aux.IntToString(xFinal, aux.params.fieldLen))
+	Hx, Hy, _ = a.ArbitraryStringToPoint(a.IntToString(xFinal, a.params.fieldLen))
 
 	//   13.  If cofactor > 1, set H = cofactor * H; else set H = H_prelim
-	if aux.params.cofactor.Cmp(one) > 0 {
-		hx, hy = aux.params.ec.ScalarMult(hx, hy, aux.params.cofactor.Bytes())
+	if a.params.cofactor.Cmp(one) > 0 {
+		Hx, Hy = a.params.ec.ScalarMult(Hx, Hy, a.params.cofactor.Bytes())
 	}
 	return
 }
