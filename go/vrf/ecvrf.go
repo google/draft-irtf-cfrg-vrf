@@ -28,6 +28,7 @@ var initonce sync.Once
 
 func initAll() {
 	initP256SHA256TAI()
+	initP256SHA256SWU()
 }
 
 // ECVRFP256SHA256TAI returns a elliptic curve based VRF instantiated with
@@ -35,6 +36,13 @@ func initAll() {
 func ECVRFP256SHA256TAI() ECVRF {
 	initonce.Do(initAll)
 	return p256SHA256TAI
+}
+
+// ECVRFP256SHA256SWU returns a elliptic curve based VRF instantiated with
+// P256, SHA256, and the Simplified SWU strategy for hashing to the curve.
+func ECVRFP256SHA256SWU() ECVRF {
+	initonce.Do(initAll)
+	return p256SHA256SWU
 }
 
 // PublicKey holds a public VRF key.
